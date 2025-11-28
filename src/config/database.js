@@ -21,10 +21,19 @@ if (isPostgres) {
   // Create a db object that mimics sqlite3 interface for PostgreSQL
   db = {
     run: (sql, params, callback) => {
+      console.log('Executing SQL:', sql.substring(0, 100) + (sql.length > 100 ? '...' : ''));
       pool.query(sql, params, (err, result) => {
+        if (err) {
+          console.error('Database error:', err.message);
+          console.error('SQL:', sql);
+        }
         if (callback) {
           // Mimic sqlite3's lastID behavior
-          const mockResult = { ...result, lastID: result.rows?.[0]?.id || result.insertId };
+          let lastID = null;
+          if (result && result.rows && result.rows.length > 0) {
+            lastID = result.rows[0].id;
+          }
+          const mockResult = result ? { ...result, lastID } : { lastID };
           callback(err, mockResult);
         }
       });
@@ -262,4 +271,4 @@ async function insertDefaultData() {
   });
 }
 
-module.exports = { db, initDatabase };
+module.exports = { db, initDatabase, isPostgres };
