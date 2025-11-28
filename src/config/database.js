@@ -61,7 +61,7 @@ if (isPostgres) {
 async function initDatabase() {
   return new Promise((resolve, reject) => {
     // Function to create all tables
-    const createTables = () => {
+    const createTables = async () => {
       // Rooms table
       db.run(`
         CREATE TABLE IF NOT EXISTS rooms (
@@ -157,7 +157,7 @@ async function initDatabase() {
       `);
 
       // Insert default data
-      insertDefaultData();
+      await insertDefaultData();
 
       // Check if database is ready
       if (isPostgres) {
@@ -183,15 +183,24 @@ async function initDatabase() {
 
     // Execute table creation
     if (isPostgres) {
-      createTables();
+      await createTables();
     } else {
-      db.serialize(createTables);
+      await new Promise((resolve, reject) => {
+        db.serialize(async () => {
+          try {
+            await createTables();
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+      });
     }
   });
 }
 
 // Insert default data
-function insertDefaultData() {
+async function insertDefaultData() {
   const ignoreSyntax = isPostgres ? 'ON CONFLICT DO NOTHING' : 'INSERT OR IGNORE';
 
   // Default menu categories
@@ -202,12 +211,18 @@ function insertDefaultData() {
     { name: 'Beverages', description: 'Refreshing drinks' }
   ];
 
-  categories.forEach(category => {
-    db.run(`
-      ${ignoreSyntax} INTO menu_categories (name, description)
-      VALUES (?, ?)
-    `, [category.name, category.description]);
-  });
+  // Insert categories
+  for (const category of categories) {
+    await new Promise((resolve, reject) => {
+      db.run(`
+        ${ignoreSyntax} INTO menu_categories (name, description)
+        VALUES (?, ?)
+      `, [category.name, category.description], (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
 
   // Default menu items
   const menuItems = [
@@ -223,12 +238,18 @@ function insertDefaultData() {
     [4, 'Wine', 'House red or white wine', 8.99]
   ];
 
-  menuItems.forEach(item => {
-    db.run(`
-      ${ignoreSyntax} INTO menu_items (category_id, name, description, price)
-      VALUES (?, ?, ?, ?)
-    `, item);
-  });
+  // Insert menu items
+  for (const item of menuItems) {
+    await new Promise((resolve, reject) => {
+      db.run(`
+        ${ignoreSyntax} INTO menu_items (category_id, name, description, price)
+        VALUES (?, ?, ?, ?)
+      `, item, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
 
   // Default staff user (password: admin123)
   const bcrypt = require('bcryptjs');
@@ -236,10 +257,15 @@ function insertDefaultData() {
   const defaultPassword = 'admin123';
   const hashedPassword = bcrypt.hashSync(defaultPassword, saltRounds);
 
-  db.run(`
-    ${ignoreSyntax} INTO staff (username, password_hash, name, role)
-    VALUES (?, ?, ?, ?)
-  `, ['admin', hashedPassword, 'Hotel Administrator', 'admin']);
+  await new Promise((resolve, reject) => {
+    db.run(`
+      ${ignoreSyntax} INTO staff (username, password_hash, name, role)
+      VALUES (?, ?, ?, ?)
+    `, ['admin', hashedPassword, 'Hotel Administrator', 'admin'], (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
 }
 
 module.exports = { db, initDatabase };
