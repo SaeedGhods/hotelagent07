@@ -7,6 +7,7 @@ let db;
 
 console.log('Database configuration:');
 console.log('- DATABASE_URL present:', !!process.env.DATABASE_URL);
+console.log('- DATABASE_URL value:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 console.log('- Using PostgreSQL:', isPostgres);
 
 if (isPostgres) {
