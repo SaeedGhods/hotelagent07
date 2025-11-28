@@ -5,6 +5,10 @@ const path = require('path');
 const isPostgres = !!process.env.DATABASE_URL;
 let db;
 
+console.log('Database configuration:');
+console.log('- DATABASE_URL present:', !!process.env.DATABASE_URL);
+console.log('- Using PostgreSQL:', isPostgres);
+
 if (isPostgres) {
   // Use PostgreSQL in production (Render)
   const { Pool } = require('pg');
