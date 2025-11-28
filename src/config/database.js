@@ -59,7 +59,7 @@ if (isPostgres) {
 
 // Initialize database tables
 async function initDatabase() {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     // Function to create all tables
     const createTables = async () => {
       // Rooms table
@@ -185,15 +185,9 @@ async function initDatabase() {
     if (isPostgres) {
       await createTables();
     } else {
-      await new Promise((resolve, reject) => {
-        db.serialize(async () => {
-          try {
-            await createTables();
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        });
+      // For SQLite, serialize is synchronous but createTables is async
+      db.serialize(() => {
+        createTables().then(resolve).catch(reject);
       });
     }
   });
