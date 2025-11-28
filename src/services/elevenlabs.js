@@ -1,8 +1,8 @@
-const { ElevenLabsAPI } = require('@elevenlabs/elevenlabs-js');
+const { ElevenLabsClient } = require('@elevenlabs/elevenlabs-js');
 const fs = require('fs');
 const path = require('path');
 
-const elevenlabs = new ElevenLabsAPI({
+const elevenlabs = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY
 });
 
@@ -45,8 +45,7 @@ async function generateSpeech(text, voiceId = VOICE_ID) {
     console.log('Generating speech for:', text.substring(0, 50) + '...');
 
     // Generate speech using ElevenLabs
-    const audioStream = await elevenlabs.generate({
-      voice: voiceId,
+    const audioStream = await elevenlabs.textToSpeech.convert(voiceId, {
       text: text,
       model_id: MODEL_ID,
       voice_settings: {
@@ -58,7 +57,9 @@ async function generateSpeech(text, voiceId = VOICE_ID) {
     });
 
     // Save audio to file
-    const buffer = Buffer.from(await audioStream.arrayBuffer());
+    // The new API returns an HttpResponsePromise, extract the data
+    const response = await audioStream;
+    const buffer = Buffer.from(await response.arrayBuffer());
     fs.writeFileSync(filePath, buffer);
 
     console.log('Speech generated and cached successfully');
