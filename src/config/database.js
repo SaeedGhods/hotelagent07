@@ -204,9 +204,6 @@ async function initDatabase() {
 
 // Insert default data
 async function insertDefaultData() {
-  const ignoreSyntax = isPostgres ? 'ON CONFLICT DO NOTHING' : 'INSERT OR IGNORE';
-
-  // Default menu categories
   const categories = [
     { name: 'Appetizers', description: 'Start your meal right' },
     { name: 'Main Courses', description: 'Hearty and satisfying' },
@@ -217,10 +214,10 @@ async function insertDefaultData() {
   // Insert categories
   for (const category of categories) {
     await new Promise((resolve, reject) => {
-      db.run(`
-        ${ignoreSyntax} INTO menu_categories (name, description)
-        VALUES (?, ?)
-      `, [category.name, category.description], (err) => {
+      const sql = isPostgres
+        ? `INSERT INTO menu_categories (name, description) VALUES ($1, $2) ON CONFLICT DO NOTHING`
+        : `INSERT OR IGNORE INTO menu_categories (name, description) VALUES (?, ?)`;
+      db.run(sql, [category.name, category.description], (err) => {
         if (err) reject(err);
         else resolve();
       });
@@ -244,10 +241,10 @@ async function insertDefaultData() {
   // Insert menu items
   for (const item of menuItems) {
     await new Promise((resolve, reject) => {
-      db.run(`
-        ${ignoreSyntax} INTO menu_items (category_id, name, description, price)
-        VALUES (?, ?, ?, ?)
-      `, item, (err) => {
+      const sql = isPostgres
+        ? `INSERT INTO menu_items (category_id, name, description, price) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`
+        : `INSERT OR IGNORE INTO menu_items (category_id, name, description, price) VALUES (?, ?, ?, ?)`;
+      db.run(sql, item, (err) => {
         if (err) reject(err);
         else resolve();
       });
@@ -261,10 +258,10 @@ async function insertDefaultData() {
   const hashedPassword = bcrypt.hashSync(defaultPassword, saltRounds);
 
   await new Promise((resolve, reject) => {
-    db.run(`
-      ${ignoreSyntax} INTO staff (username, password_hash, name, role)
-      VALUES (?, ?, ?, ?)
-    `, ['admin', hashedPassword, 'Hotel Administrator', 'admin'], (err) => {
+    const sql = isPostgres
+      ? `INSERT INTO staff (username, password_hash, name, role) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`
+      : `INSERT OR IGNORE INTO staff (username, password_hash, name, role) VALUES (?, ?, ?, ?)`;
+    db.run(sql, ['admin', hashedPassword, 'Hotel Administrator', 'admin'], (err) => {
       if (err) reject(err);
       else resolve();
     });
