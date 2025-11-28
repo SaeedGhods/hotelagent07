@@ -311,7 +311,7 @@ class OrderProcessor {
       db.all(`
         SELECT id, name, price, description
         FROM menu_items
-        WHERE is_available = 1
+        WHERE is_available = true
         ORDER BY name
       `, [], (err, rows) => {
         if (err) reject(err);

@@ -83,7 +83,7 @@ async function initDatabase() {
           id ${isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT'},
           name ${isPostgres ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
           description ${isPostgres ? 'TEXT' : 'TEXT'},
-          is_active BOOLEAN DEFAULT true,
+          is_active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
@@ -97,7 +97,7 @@ async function initDatabase() {
           description ${isPostgres ? 'TEXT' : 'TEXT'},
           price DECIMAL(10,2) NOT NULL,
           image_url ${isPostgres ? 'VARCHAR(500)' : 'TEXT'},
-          is_available BOOLEAN DEFAULT true,
+          is_available BOOLEAN DEFAULT TRUE,
           preparation_time INTEGER DEFAULT 30,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )${isPostgres ? '' : ', FOREIGN KEY (category_id) REFERENCES menu_categories (id)'}
@@ -138,7 +138,7 @@ async function initDatabase() {
           password_hash ${isPostgres ? 'VARCHAR(500)' : 'TEXT'} NOT NULL,
           name ${isPostgres ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
           role ${isPostgres ? 'VARCHAR(255)' : 'TEXT'} DEFAULT 'staff',
-          is_active BOOLEAN DEFAULT true,
+          is_active BOOLEAN DEFAULT TRUE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);

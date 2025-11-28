@@ -9,7 +9,7 @@ router.get('/menu', (req, res) => {
     SELECT mi.*, mc.name as category_name
     FROM menu_items mi
     JOIN menu_categories mc ON mi.category_id = mc.id
-    WHERE mi.is_available = 1 AND mc.is_active = 1
+    WHERE mi.is_available = true AND mc.is_active = true
     ORDER BY mc.name, mi.name
   `, [], (err, rows) => {
     if (err) {
