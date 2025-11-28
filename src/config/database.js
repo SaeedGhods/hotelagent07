@@ -60,7 +60,8 @@ if (isPostgres) {
 // Initialize database tables
 async function initDatabase() {
   return new Promise((resolve, reject) => {
-
+    // Function to create all tables
+    const createTables = () => {
       // Rooms table
       db.run(`
         CREATE TABLE IF NOT EXISTS rooms (
@@ -158,9 +159,8 @@ async function initDatabase() {
       // Insert default data
       insertDefaultData();
 
-      // Check if database is ready (different approaches for PostgreSQL vs SQLite)
+      // Check if database is ready
       if (isPostgres) {
-        // For PostgreSQL, just verify connection works
         db.get("SELECT 1", [], (err, result) => {
           if (err) {
             reject(err);
@@ -170,7 +170,6 @@ async function initDatabase() {
           }
         });
       } else {
-        // For SQLite, check if tables were created
         db.get("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1", (err, row) => {
           if (err) {
             reject(err);
@@ -184,11 +183,9 @@ async function initDatabase() {
 
     // Execute table creation
     if (isPostgres) {
-      // For PostgreSQL, run all queries sequentially without serialize
-      initTables();
+      createTables();
     } else {
-      // For SQLite, use serialize to ensure sequential execution
-      db.serialize(initTables);
+      db.serialize(createTables);
     }
   });
 }
