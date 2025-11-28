@@ -2,9 +2,9 @@ services:
   - type: web
     name: hotel-room-service-agent
     runtime: node
-    buildCommand: npm install
-    startCommand: npm start
-    healthCheckPath: /health
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    healthCheckPath: "/health"
     envVars:
       - key: NODE_ENV
         value: production
