@@ -59,9 +59,6 @@ if (isPostgres) {
 // Initialize database tables
 async function initDatabase() {
   return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      // Determine if we're using PostgreSQL or SQLite
-      const isPostgres = !!process.env.DATABASE_URL;
 
       // Rooms table
       db.run(`
@@ -93,14 +90,14 @@ async function initDatabase() {
       db.run(`
         CREATE TABLE IF NOT EXISTS menu_items (
           id ${isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT'},
-          category_id INTEGER,
+          category_id INTEGER ${isPostgres ? 'REFERENCES menu_categories (id)' : ''},
           name ${isPostgres ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
           description ${isPostgres ? 'TEXT' : 'TEXT'},
           price DECIMAL(10,2) NOT NULL,
           image_url ${isPostgres ? 'VARCHAR(500)' : 'TEXT'},
           is_available BOOLEAN DEFAULT true,
           preparation_time INTEGER DEFAULT 30,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP${isPostgres ? ', FOREIGN KEY (category_id) REFERENCES menu_categories (id)' : ''}
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )${isPostgres ? '' : ', FOREIGN KEY (category_id) REFERENCES menu_categories (id)'}
       `);
 
@@ -108,13 +105,13 @@ async function initDatabase() {
       db.run(`
         CREATE TABLE IF NOT EXISTS orders (
           id ${isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT'},
-          room_id INTEGER NOT NULL,
+          room_id INTEGER ${isPostgres ? 'REFERENCES rooms (id)' : ''} NOT NULL,
           status ${isPostgres ? 'VARCHAR(255)' : 'TEXT'} DEFAULT 'pending',
           total_amount DECIMAL(10,2) DEFAULT 0,
           special_instructions ${isPostgres ? 'TEXT' : 'TEXT'},
           estimated_delivery_time TIMESTAMP,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP${isPostgres ? ', FOREIGN KEY (room_id) REFERENCES rooms (id)' : ''}
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )${isPostgres ? '' : ', FOREIGN KEY (room_id) REFERENCES rooms (id)'}
       `);
 
@@ -122,12 +119,12 @@ async function initDatabase() {
       db.run(`
         CREATE TABLE IF NOT EXISTS order_items (
           id ${isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT'},
-          order_id INTEGER NOT NULL,
-          menu_item_id INTEGER NOT NULL,
+          order_id INTEGER ${isPostgres ? 'REFERENCES orders (id)' : ''} NOT NULL,
+          menu_item_id INTEGER ${isPostgres ? 'REFERENCES menu_items (id)' : ''} NOT NULL,
           quantity INTEGER NOT NULL,
           unit_price DECIMAL(10,2) NOT NULL,
           special_instructions ${isPostgres ? 'TEXT' : 'TEXT'},
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP${isPostgres ? ', FOREIGN KEY (order_id) REFERENCES orders (id), FOREIGN KEY (menu_item_id) REFERENCES menu_items (id)' : ''}
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )${isPostgres ? '' : ', FOREIGN KEY (order_id) REFERENCES orders (id), FOREIGN KEY (menu_item_id) REFERENCES menu_items (id)'}
       `);
 
@@ -148,27 +145,50 @@ async function initDatabase() {
       db.run(`
         CREATE TABLE IF NOT EXISTS notifications (
           id ${isPostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT'},
-          order_id INTEGER NOT NULL,
+          order_id INTEGER ${isPostgres ? 'REFERENCES orders (id)' : ''} NOT NULL,
           type ${isPostgres ? 'VARCHAR(255)' : 'TEXT'} NOT NULL,
           status ${isPostgres ? 'VARCHAR(255)' : 'TEXT'},
           message ${isPostgres ? 'TEXT' : 'TEXT'} NOT NULL,
           recipient ${isPostgres ? 'VARCHAR(255)' : 'TEXT'},
-          sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP${isPostgres ? ', FOREIGN KEY (order_id) REFERENCES orders (id)' : ''}
+          sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )${isPostgres ? '' : ', FOREIGN KEY (order_id) REFERENCES orders (id)'}
       `);
 
       // Insert default data
       insertDefaultData();
 
-      db.get("SELECT name FROM sqlite_master WHERE type='table'", (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          console.log('Database tables created successfully');
-          resolve();
-        }
-      });
-    });
+      // Check if database is ready (different approaches for PostgreSQL vs SQLite)
+      if (isPostgres) {
+        // For PostgreSQL, just verify connection works
+        db.get("SELECT 1", [], (err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            console.log('Database tables created successfully');
+            resolve();
+          }
+        });
+      } else {
+        // For SQLite, check if tables were created
+        db.get("SELECT name FROM sqlite_master WHERE type='table' LIMIT 1", (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            console.log('Database tables created successfully');
+            resolve();
+          }
+        });
+      }
+    };
+
+    // Execute table creation
+    if (isPostgres) {
+      // For PostgreSQL, run all queries sequentially without serialize
+      initTables();
+    } else {
+      // For SQLite, use serialize to ensure sequential execution
+      db.serialize(initTables);
+    }
   });
 }
 
